@@ -30,6 +30,11 @@ repos:
     refspec: 76eac233f1b1d0d117b3f05b3dec8a6da1cdf4c7
     layers:
       meta:
+    patches:
+      1:
+        path: isar-patches/0001-meta-image-Account-for-Ubuntu-differences-in-do_copy.patch
+      2:
+        path: isar-patches/0002-meta-isar-bootstrap-allow-passing-a-SCRIPT-to-deboot.patch
 
 bblayers_conf_header:
   standard: |

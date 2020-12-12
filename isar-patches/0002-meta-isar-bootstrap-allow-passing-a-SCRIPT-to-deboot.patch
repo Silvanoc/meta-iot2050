@@ -1,0 +1,49 @@
+From d00f407d8935566f0b53d8085547e31107ef50ea Mon Sep 17 00:00:00 2001
+From: Henning Schild <henning.schild@siemens.com>
+Date: Thu, 15 Nov 2018 18:29:30 +0100
+Subject: [PATCH 2/2] meta/isar-bootstrap: allow passing a SCRIPT to
+ debootstrap
+
+Debootstrap uses scripts that usually have the same name as SUITE so we
+never set them. In order to install a SUITE that an outdated version of
+debootstrap does not (yet) know, we can tell debootstrap which SCRIPT to
+use.
+In fact many modern SUITEs will use SCRIPTS we might already have, we
+just do not have the symlink to them.
+i.e. "cosmic" uses the SCRIPT "gutsy" and a debootstrap from "stretch"
+does know "gutsy" but not "cosmic"
+So we can debootstrap SUITEs from the future, given they use a SCRIPT we
+already have.
+
+Signed-off-by: Henning Schild <henning.schild@siemens.com>
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+---
+ meta/recipes-core/isar-bootstrap/isar-bootstrap.inc | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/meta/recipes-core/isar-bootstrap/isar-bootstrap.inc b/meta/recipes-core/isar-bootstrap/isar-bootstrap.inc
+index dca136e0..a5cd1f03 100644
+--- a/meta/recipes-core/isar-bootstrap/isar-bootstrap.inc
++++ b/meta/recipes-core/isar-bootstrap/isar-bootstrap.inc
+@@ -271,14 +271,16 @@ isar_bootstrap() {
+                                ${@get_distro_components_argument(d, True)} \
+                                "${@get_distro_suite(d, True)}" \
+                                "${ROOTFSDIR}" \
+-                               "${@get_distro_source(d, True)}"
++                               "${@get_distro_source(d, True)}" \
++                               ${DISTRO_DEBOOTSTRAP_SCRIPT}
+             else
+                 ${DEBOOTSTRAP} $debootstrap_args \
+                                --arch="${DISTRO_ARCH}" \
+                                ${@get_distro_components_argument(d, False)} \
+                                "${@get_distro_suite(d, False)}" \
+                                "${ROOTFSDIR}" \
+-                               "${@get_distro_source(d, False)}"
++                               "${@get_distro_source(d, False)}" \
++                               ${DISTRO_DEBOOTSTRAP_SCRIPT}
+             fi
+ 
+             # Install apt config
+-- 
+2.26.2
+
