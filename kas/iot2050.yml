@@ -30,6 +30,9 @@ repos:
     refspec: f5a6fdfd9aad49202093aab2158f625429eaf7c5
     layers:
       meta:
+    patches:
+      containerized-sdk:
+        path: isar-patches/0001-sdk-support-creation-of-container-image.patch
 
 bblayers_conf_header:
   standard: |
