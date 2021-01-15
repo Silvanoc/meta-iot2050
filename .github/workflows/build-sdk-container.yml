@@ -1,0 +1,56 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Get Skopeo from Groovy
+        run: |
+          echo 'deb http://no.archive.ubuntu.com/ubuntu groovy main' | sudo tee /etc/apt/sources.list.d/groovy.list >/dev/null
+          echo "Package: skopeo\nPin: release n=groovy\nPin-Priority: 501\n\nPackage: *\nPin: release n=groovy\nPin-Priority: -1" | sudo tee /etc/apt/preferences.d/skopeo >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y -f --no-install-recommends skopeo
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+      - name: Login to ghcr
+        run: |
+          echo "Trying to login to ghcr.io/silvanoc/meta-iot2050"
+          sudo skopeo --insecure-policy login --username "${GITHUB_ACTOR}" --password ${{ secrets.PACKAGE_DEPLOY_TOKEN }} ghcr.io/silvanoc/meta-iot2050
+
+      # Runs a set of commands using the runners shell
+      - name: Build the containerized SDK
+        run: |
+          docker pull ghcr.io/silvanoc/kas/kas-isar:next
+          wget -O kas-container https://raw.githubusercontent.com/Silvanoc/kas/master/kas-container
+          chmod +x kas-container
+          KAS_CONTAINER_IMAGE_PATH="ghcr.io/silvanoc/kas" KAS_IMAGE_VERSION="next" ./kas-container --isar build -c populate_sdk ./kas/iot2050.yml
+
+      - name: unxz containerized SDK
+        run: |
+          unxz build/tmp/deploy/images/iot2050/sdk-isar-arm64-docker-archive.tar.xz
+
+      - name: Push container image to ghcr
+        run: sudo skopeo --insecure-policy copy docker-archive:$(pwd)/build/tmp/deploy/images/iot2050/sdk-isar-arm64-docker-archive.tar docker://ghcr.io/silvanoc/meta-iot2050/isar-sdk-arm64:latest
+
