@@ -45,7 +45,7 @@ jobs:
           docker pull ghcr.io/silvanoc/kas/kas-isar:next
           wget -O kas-container https://raw.githubusercontent.com/Silvanoc/kas/master/kas-container
           chmod +x kas-container
-          KAS_CONTAINER_IMAGE_PATH="ghcr.io/silvanoc/kas" KAS_IMAGE_VERSION="next" ./kas-container --isar build -c populate_sdk ./kas/iot2050.yml
+          KAS_CONTAINER_IMAGE_PATH="ghcr.io/silvanoc/kas" KAS_IMAGE_VERSION="next" ./kas-container --isar build kas-iot2050-example.yml:kas/opt/sdk.yml
 
       - name: unxz containerized SDK
         run: |
