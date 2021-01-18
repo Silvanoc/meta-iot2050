@@ -1,6 +1,8 @@
 # Containerized SDK
 
-## Building
+## Building the SDK container image
+
+### Manually
 
 Build Bitbake task `populate_sdk` for the target `iot2050-image-base` with kas-container using a `kas-isar` container image created as PoC installing `umoci` and `skopeo`.
 Go get a coffee, this build takes around 40min in my machine!
@@ -16,18 +18,28 @@ KAS_IMAGE_VERSION="next" \
 
 The archive `build/tmp/deploy/images/iot2050/sdk-isar-arm64-docker-archive.tar.xz` contains the Docker container image archive.
 
-## Running the SDK
-
 Load the Docker container image on the local Docker daemon:
 
 ```
 xzcat build/tmp/deploy/images/iot2050/sdk-isar-arm64-docker-archive.tar.xz | docker load
 ```
 
-Run a container using the SDK container image:
+Tag the image to correspond the automatically built one:
 
 ```
-docker run --rm -ti --volume $(pwd):/iot2050 isar-sdk-isar-arm64
+docker tag isar-sdk-isar-arm64:latest ghcr.io/silvanoc/meta-iot2050/isar-sdk-arm64:latest
+```
+
+### Using GitHub Actions
+
+Adapt [this workflow](https://github.com/Silvanoc/meta-iot2050/blob/master/.github/workflows/build-sdk-container.yml) for your needs.
+
+## Running the SDK
+
+Run a container using the SDK container image (pulling it from ghcr will take a while, if not locally built):
+
+```
+docker run --rm -ti --volume $(pwd):/iot2050 ghcr.io/silvanoc/meta-iot2050/isar-sdk-arm64:latest
 ```
 
 Check that cross toolchains are installed (inside of the container)
