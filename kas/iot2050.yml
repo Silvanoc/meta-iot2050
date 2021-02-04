@@ -47,5 +47,3 @@ local_conf_header:
     CONF_VERSION = "1"
   crossbuild: |
     ISAR_CROSS_COMPILE = "1"
-  sdk-container:
-    SDK_FORMATS = "docker-archive"
