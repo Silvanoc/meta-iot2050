@@ -1,4 +1,4 @@
-From 6e618e45f4df8e885e822469b4a5514157577c41 Mon Sep 17 00:00:00 2001
+From ea3fec66a7869436d1d0691091c378e2f1918bad Mon Sep 17 00:00:00 2001
 From: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 Date: Fri, 8 Jan 2021 22:12:31 +0100
 Subject: [PATCH 1/2] sdk: support creation of container image
@@ -8,20 +8,20 @@ containing the SDK.
 
 Signed-off-by: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 ---
- meta/classes/image-sdk-extension.bbclass | 99 ++++++++++++++++++++++--
- 1 file changed, 92 insertions(+), 7 deletions(-)
+ meta/classes/image-sdk-extension.bbclass | 104 +++++++++++++++++++++--
+ 1 file changed, 97 insertions(+), 7 deletions(-)
 
 diff --git a/meta/classes/image-sdk-extension.bbclass b/meta/classes/image-sdk-extension.bbclass
-index a8c708a..9317256 100644
+index a8c708a..082b16d 100644
 --- a/meta/classes/image-sdk-extension.bbclass
 +++ b/meta/classes/image-sdk-extension.bbclass
-@@ -6,10 +6,77 @@
+@@ -6,10 +6,81 @@
  # This class extends the image.bbclass to supply the creation of a sdk
  
  SDK_INCLUDE_ISAR_APT ?= "0"
-+SDK_GENERATE_FORMATS = "${@d.getVar("SDK_FORMATS", "tar")}"
++SDK_FORMATS ?= "tar-xz"
 +
-+sdk_tar() {
++sdk_tar_xz() {
 +    # Copy mount_chroot.sh for convenience
 +    sudo cp ${SCRIPTSDIR}/mount_chroot.sh ${SDKCHROOT_DIR}
 +
@@ -29,6 +29,7 @@ index a8c708a..9317256 100644
 +    cd -P ${SDKCHROOT_DIR}/..
 +    sudo tar --transform="s|^rootfs|sdk-${DISTRO}-${DISTRO_ARCH}|" \
 +        -c rootfs | xz -T0 > ${DEPLOY_DIR_IMAGE}/sdk-${DISTRO}-${DISTRO_ARCH}.tar.xz
++    bbnote "SDK rootfs available in ${DEPLOY_DIR_IMAGE}/sdk-${DISTRO}-${DISTRO_ARCH}.tar.xz"
 +}
 +
 +sdk_container_images() {
@@ -73,15 +74,18 @@ index a8c708a..9317256 100644
 +                skopeo --insecure-policy copy \
 +                    "oci:${oci_img_dir}:${full_tag}" "${target}"
 +                xz -T0 "${image_archive}"
++                bbnote "Containerized SDK available in ${image_archive}.xz"
 +                ;;
 +            "oci")
 +                tar --create --xz --directory "${oci_img_dir}" \
 +                    --file "${image_archive}.xz" .
++                bbnote "Containerized SDK available in ${image_archive}.xz"
 +                ;;
 +            "docker-daemon" | "containers-storage")
 +                skopeo --insecure-policy copy \
 +                    "oci:${oci_img_dir}:${full_tag}" \
 +                    "${sdk_format}:${image_name}:latest"
++                bbnote "Containerized SDK available in ${sdk_format} as '${image_name}:latest'"
 +                ;;
 +        esac
 +    done
@@ -90,11 +94,11 @@ index a8c708a..9317256 100644
  do_populate_sdk[stamp-extra-info] = "${DISTRO}-${MACHINE}"
  do_populate_sdk[depends] = "sdkchroot:do_build"
 -do_populate_sdk[vardeps] += "SDK_INCLUDE_ISAR_APT"
-+do_populate_sdk[vardeps] += "SDK_INCLUDE_ISAR_APT SDK_GENERATE_FORMATS"
++do_populate_sdk[vardeps] += "SDK_INCLUDE_ISAR_APT SDK_FORMATS"
  do_populate_sdk() {
      if [ "${SDK_INCLUDE_ISAR_APT}" = "1" ]; then
          # Copy isar-apt with deployed Isar packages
-@@ -48,12 +115,30 @@ do_populate_sdk() {
+@@ -48,12 +119,31 @@ do_populate_sdk() {
          done
      done
  
@@ -102,10 +106,10 @@ index a8c708a..9317256 100644
 -    sudo cp ${SCRIPTSDIR}/mount_chroot.sh ${SDKCHROOT_DIR}
 +    # separate SDK formats: TAR and container formats
 +    container_formats=""
-+    for sdk_format in ${SDK_GENERATE_FORMATS} ; do
++    for sdk_format in ${SDK_FORMATS} ; do
 +        case ${sdk_format} in
-+            tar)
-+                sdk_tar
++            "tar-xz")
++                sdk_tar_xz
 +                ;;
 +            "docker-archive" | "oci" | "oci-archive")
 +                container_formats="${container_formats} ${sdk_format}"
@@ -127,10 +131,11 @@ index a8c708a..9317256 100644
 -        -c rootfs | xz -T0 > ${DEPLOY_DIR_IMAGE}/sdk-${DISTRO}-${DISTRO_ARCH}.tar.xz
 +    # generate the SDK in all the desired container formats
 +    if [ -n "${container_formats}" ] ; then
++        bbnote "Generating SDK container in${container_formats} format"
 +        sdk_container_images "${container_formats}"
 +    fi
  }
  addtask populate_sdk after do_rootfs
 -- 
-2.29.2
+2.30.0
 
