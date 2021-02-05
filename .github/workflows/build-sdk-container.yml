@@ -49,8 +49,8 @@ jobs:
 
       - name: unxz containerized SDK
         run: |
-          unxz build/tmp/deploy/images/iot2050/sdk-isar-arm64-docker-archive.tar.xz
+          unxz build/tmp/deploy/images/iot2050/sdk-iot2050-debian-arm64-docker-archive.tar.xz
 
       - name: Push container image to ghcr
-        run: sudo skopeo --insecure-policy copy docker-archive:$(pwd)/build/tmp/deploy/images/iot2050/sdk-isar-arm64-docker-archive.tar docker://ghcr.io/silvanoc/meta-iot2050/isar-sdk-arm64:latest
+        run: sudo skopeo --insecure-policy copy docker-archive:$(pwd)/build/tmp/deploy/images/iot2050/sdk-iot2050-debian-arm64-docker-archive.tar docker://ghcr.io/silvanoc/meta-iot2050/iot2050-debian-sdk-arm64:latest
 
