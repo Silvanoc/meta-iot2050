@@ -54,3 +54,6 @@ jobs:
       - name: Push container image to ghcr
         run: sudo skopeo --insecure-policy copy docker-archive:$(pwd)/build/tmp/deploy/images/iot2050/sdk-iot2050-debian-arm64-docker-archive.tar docker://ghcr.io/silvanoc/meta-iot2050/iot2050-debian-sdk-arm64:latest
 
+      - name: Create containerized target root filesystem
+        run: |
+          KAS_CONTAINER_IMAGE_PATH="ghcr.io/silvanoc/kas" KAS_IMAGE_VERSION="next" ./kas-container --isar build kas-iot2050-example.yml

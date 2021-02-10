@@ -1,0 +1,190 @@
+From a5030eedfde932b1ba4deb4ced8b0d9d6391e424 Mon Sep 17 00:00:00 2001
+From: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
+Date: Fri, 8 Jan 2021 22:12:31 +0100
+Subject: [PATCH 1/2] images: add support for container images
+
+Add support for creation of container images with the build root
+filesystems.
+
+Extend also task "populate_sdk" to support the creation of a container image
+containing the SDK.
+
+Signed-off-by: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
+---
+ meta/classes/container-img.bbclass       | 89 ++++++++++++++++++++++++
+ meta/classes/image-sdk-extension.bbclass | 52 ++++++++++++--
+ 2 files changed, 134 insertions(+), 7 deletions(-)
+ create mode 100644 meta/classes/container-img.bbclass
+
+diff --git a/meta/classes/container-img.bbclass b/meta/classes/container-img.bbclass
+new file mode 100644
+index 0000000..1d7c9d7
+--- /dev/null
++++ b/meta/classes/container-img.bbclass
+@@ -0,0 +1,89 @@
++# This software is a part of ISAR.
++# Copyright (C) Siemens AG, 2021
++#
++# SPDX-License-Identifier: MIT
++#
++# This class provides the tasks 'containerize_rootfs' and 'containerize_sdk'
++# to create container images containing the target rootfs and the SDK
++# respectively.
++
++CONTAINER_FORMATS ?= "docker-archive"
++
++containerize_rootfs() {
++    local cmd="/bin/dash"
++    local empty_tag="empty"
++    local full_tag="latest"
++    local oci_img_dir="${WORKDIR}/oci-image"
++    local rootfs="$1"
++    local rootfs_id="$2"
++    local container_formats="$3"
++
++    # prepare OCI container image skeleton
++    bbdebug 1 "prepare OCI container image skeleton"
++    rm -rf "${oci_img_dir}"
++    sudo umoci init --layout "${oci_img_dir}"
++    sudo umoci new --image "${oci_img_dir}:${empty_tag}"
++    sudo umoci config --image "${oci_img_dir}:${empty_tag}" \
++        --config.cmd="${cmd}"
++    sudo umoci unpack --image "${oci_img_dir}:${empty_tag}" \
++        "${oci_img_dir}_unpacked"
++
++    # add root filesystem as the flesh of the skeleton
++    sudo cp -a "${rootfs}"/* "${oci_img_dir}_unpacked/rootfs/"
++
++    # pack container image
++    bbdebug 1 "pack container image"
++    sudo umoci repack --image "${oci_img_dir}:${full_tag}" \
++        "${oci_img_dir}_unpacked"
++    sudo umoci remove --image "${oci_img_dir}:${empty_tag}"
++    sudo rm -rf "${oci_img_dir}_unpacked"
++
++    # no root needed anymore
++    sudo chown --recursive $(id -u):$(id -g) "${oci_img_dir}"
++
++    # convert the OCI container image to the desired format
++    image_name="isar-${rootfs_id}"
++    for image_type in ${CONTAINER_FORMATS} ; do
++        image_archive="${DEPLOY_DIR_IMAGE}/${rootfs_id}-${image_type}.tar"
++        bbdebug 1 "Creating container image type: ${image_type}"
++        case "${image_type}" in
++            "docker-archive" | "oci-archive")
++                if [ "${image_type}" = "oci-archive" ] ; then
++                    target="${image_type}:${image_archive}:latest"
++                else
++                    target="${image_type}:${image_archive}:${image_name}:latest"
++                fi
++                rm -f "${image_archive}" "${image_archive}.xz"
++                bbdebug 2 "Converting OCI image to ${image_type}"
++                skopeo --insecure-policy copy \
++                    "oci:${oci_img_dir}:${full_tag}" "${target}"
++                bbdebug 2 "Compressing image"
++                xz -T0 "${image_archive}"
++                ;;
++            "oci")
++                tar --create --xz --directory "${oci_img_dir}" \
++                    --file "${image_archive}.xz" .
++                ;;
++            "docker-daemon" | "containers-storage")
++                skopeo --insecure-policy copy \
++                    "oci:${oci_img_dir}:${full_tag}" \
++                    "${image_type}:${image_name}:latest"
++                ;;
++            *)
++                die "Unsupported format for containerize_rootfs: ${image_type}"
++                ;;
++        esac
++    done
++}
++
++do_container_image[stamp-extra-info] = "${DISTRO}-${MACHINE}"
++do_container_image[vardeps] += "CONTAINER_FORMATS"
++do_container_image(){
++    rootfs_id="${DISTRO}-${DISTRO_ARCH}"
++
++    bbnote "Generate container image in these formats: ${CONTAINER_FORMATS}"
++    containerize_rootfs "${IMAGE_ROOTFS}" "${rootfs_id}" "${CONTAINER_FORMATS}"
++}
++
++addtask container_image before do_image after do_image_tools
++
+diff --git a/meta/classes/image-sdk-extension.bbclass b/meta/classes/image-sdk-extension.bbclass
+index a8c708a..25d371c 100644
+--- a/meta/classes/image-sdk-extension.bbclass
++++ b/meta/classes/image-sdk-extension.bbclass
+@@ -6,11 +6,25 @@
+ # This class extends the image.bbclass to supply the creation of a sdk
+ 
+ SDK_INCLUDE_ISAR_APT ?= "0"
++SDK_FORMATS ?= "tar-xz"
++
++sdk_tar_xz() {
++    # Copy mount_chroot.sh for convenience
++    sudo cp ${SCRIPTSDIR}/mount_chroot.sh ${SDKCHROOT_DIR}
++
++    # Create SDK archive
++    cd -P ${SDKCHROOT_DIR}/..
++    sudo tar --transform="s|^rootfs|sdk-${DISTRO}-${DISTRO_ARCH}|" \
++        -c rootfs | xz -T0 > ${DEPLOY_DIR_IMAGE}/sdk-${DISTRO}-${DISTRO_ARCH}.tar.xz
++    bbnote "SDK rootfs available in ${DEPLOY_DIR_IMAGE}/sdk-${DISTRO}-${DISTRO_ARCH}.tar.xz"
++}
+ 
+ do_populate_sdk[stamp-extra-info] = "${DISTRO}-${MACHINE}"
+ do_populate_sdk[depends] = "sdkchroot:do_build"
+-do_populate_sdk[vardeps] += "SDK_INCLUDE_ISAR_APT"
++do_populate_sdk[vardeps] += "SDK_INCLUDE_ISAR_APT SDK_FORMATS"
+ do_populate_sdk() {
++    local sdk_container_formats=""
++
+     if [ "${SDK_INCLUDE_ISAR_APT}" = "1" ]; then
+         # Copy isar-apt with deployed Isar packages
+         sudo cp -Trpfx ${REPO_ISAR_DIR}/${DISTRO} ${SDKCHROOT_DIR}/isar-apt
+@@ -48,12 +62,36 @@ do_populate_sdk() {
+         done
+     done
+ 
+-    # Copy mount_chroot.sh for convenience
+-    sudo cp ${SCRIPTSDIR}/mount_chroot.sh ${SDKCHROOT_DIR}
++    # separate SDK formats: TAR and container formats
++    for sdk_format in ${SDK_FORMATS} ; do
++        case ${sdk_format} in
++            "tar-xz")
++                sdk_tar_xz
++                ;;
++            "docker-archive" | "oci" | "oci-archive")
++                if [ -z "${sdk_container_formats}" ] ; then
++                    sdk_container_formats="${sdk_format}"
++                else
++                    sdk_container_formats="${sdk_container_formats} ${sdk_format}"
++                fi
++                ;;
++            "docker-daemon" | "containers-storage")
++                if [ -f /.dockerenv ] || [ -f /run/.containerenv ] ; then
++                    die "Adding the SDK container image to a container runtime (${sdk_format}) not supported if running from a container (e.g. 'kas-container')"
++                fi
++                ;;
++            *)
++                die "unsupported SDK format specified: ${sdk_format}"
++                ;;
++        esac
++    done
+ 
+-    # Create SDK archive
+-    cd -P ${SDKCHROOT_DIR}/..
+-    sudo tar --transform="s|^rootfs|sdk-${DISTRO}-${DISTRO_ARCH}|" \
+-        -c rootfs | xz -T0 > ${DEPLOY_DIR_IMAGE}/sdk-${DISTRO}-${DISTRO_ARCH}.tar.xz
++    # generate the SDK in all the desired container formats
++    if [ -n "${sdk_container_formats}" ] ; then
++        bbnote "Generating SDK container in ${sdk_container_formats} format"
++        containerize_rootfs "${SDKCHROOT_DIR}" "sdk-${DISTRO}-${DISTRO_ARCH}" "${sdk_container_formats}"
++    fi
+ }
++
+ addtask populate_sdk after do_rootfs
++
+-- 
+2.30.0
+

@@ -32,9 +32,9 @@ repos:
       meta:
     patches:
       containerized-sdk:
-        path: isar-patches/0001-sdk-support-creation-of-container-image.patch
+        path: isar-patches/0001-images-add-support-for-container-images.patch
       containerized-sdk-docu:
-        path: isar-patches/0002-docs-document-usage-of-sdk-container-images.patch
+        path: isar-patches/0002-docs-document-creation-of-container-images.patch
 
 bblayers_conf_header:
   standard: |
