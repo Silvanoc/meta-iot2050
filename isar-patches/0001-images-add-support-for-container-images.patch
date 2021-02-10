@@ -1,4 +1,4 @@
-From a5030eedfde932b1ba4deb4ced8b0d9d6391e424 Mon Sep 17 00:00:00 2001
+From be434b2bc9773a31935daf4032f37271daefd6b2 Mon Sep 17 00:00:00 2001
 From: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 Date: Fri, 8 Jan 2021 22:12:31 +0100
 Subject: [PATCH 1/2] images: add support for container images
@@ -11,17 +11,17 @@ containing the SDK.
 
 Signed-off-by: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 ---
- meta/classes/container-img.bbclass       | 89 ++++++++++++++++++++++++
- meta/classes/image-sdk-extension.bbclass | 52 ++++++++++++--
- 2 files changed, 134 insertions(+), 7 deletions(-)
+ meta/classes/container-img.bbclass       | 88 ++++++++++++++++++++++++
+ meta/classes/image-sdk-extension.bbclass | 51 ++++++++++++--
+ 2 files changed, 132 insertions(+), 7 deletions(-)
  create mode 100644 meta/classes/container-img.bbclass
 
 diff --git a/meta/classes/container-img.bbclass b/meta/classes/container-img.bbclass
 new file mode 100644
-index 0000000..1d7c9d7
+index 0000000..35c7bbc
 --- /dev/null
 +++ b/meta/classes/container-img.bbclass
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,88 @@
 +# This software is a part of ISAR.
 +# Copyright (C) Siemens AG, 2021
 +#
@@ -110,9 +110,8 @@ index 0000000..1d7c9d7
 +}
 +
 +addtask container_image before do_image after do_image_tools
-+
 diff --git a/meta/classes/image-sdk-extension.bbclass b/meta/classes/image-sdk-extension.bbclass
-index a8c708a..25d371c 100644
+index a8c708a..63138da 100644
 --- a/meta/classes/image-sdk-extension.bbclass
 +++ b/meta/classes/image-sdk-extension.bbclass
 @@ -6,11 +6,25 @@
@@ -142,7 +141,7 @@ index a8c708a..25d371c 100644
      if [ "${SDK_INCLUDE_ISAR_APT}" = "1" ]; then
          # Copy isar-apt with deployed Isar packages
          sudo cp -Trpfx ${REPO_ISAR_DIR}/${DISTRO} ${SDKCHROOT_DIR}/isar-apt
-@@ -48,12 +62,36 @@ do_populate_sdk() {
+@@ -48,12 +62,35 @@ do_populate_sdk() {
          done
      done
  
@@ -184,7 +183,6 @@ index a8c708a..25d371c 100644
  }
 +
  addtask populate_sdk after do_rootfs
-+
 -- 
 2.30.0
 

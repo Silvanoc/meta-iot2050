@@ -1,4 +1,4 @@
-From 369ff8d515b8fb710acefb253082c2a077d1468f Mon Sep 17 00:00:00 2001
+From 2a6f68a353eb8a2ac08dc8bb5bd3bcccd6275e09 Mon Sep 17 00:00:00 2001
 From: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 Date: Wed, 10 Feb 2021 14:04:02 +0100
 Subject: [PATCH 2/2] docs: document creation of container images
