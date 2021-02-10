@@ -1,4 +1,4 @@
-From be434b2bc9773a31935daf4032f37271daefd6b2 Mon Sep 17 00:00:00 2001
+From d4abe509581ec63a3e7e88b4d03856e77c9112f0 Mon Sep 17 00:00:00 2001
 From: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 Date: Fri, 8 Jan 2021 22:12:31 +0100
 Subject: [PATCH 1/2] images: add support for container images
@@ -13,7 +13,8 @@ Signed-off-by: Silvano Cirujano Cuesta <silvano.cirujano-cuesta@siemens.com>
 ---
  meta/classes/container-img.bbclass       | 88 ++++++++++++++++++++++++
  meta/classes/image-sdk-extension.bbclass | 51 ++++++++++++--
- 2 files changed, 132 insertions(+), 7 deletions(-)
+ meta/classes/image.bbclass               |  1 +
+ 3 files changed, 133 insertions(+), 7 deletions(-)
  create mode 100644 meta/classes/container-img.bbclass
 
 diff --git a/meta/classes/container-img.bbclass b/meta/classes/container-img.bbclass
@@ -183,6 +184,18 @@ index a8c708a..63138da 100644
  }
 +
  addtask populate_sdk after do_rootfs
+diff --git a/meta/classes/image.bbclass b/meta/classes/image.bbclass
+index eddc444..7fb7b7e 100644
+--- a/meta/classes/image.bbclass
++++ b/meta/classes/image.bbclass
+@@ -76,6 +76,7 @@ inherit image-tools-extension
+ inherit image-postproc-extension
+ inherit image-locales-extension
+ inherit image-account-extension
++inherit container-img
+ 
+ # Extra space for rootfs in MB
+ ROOTFS_EXTRA ?= "64"
 -- 
 2.30.0
 
