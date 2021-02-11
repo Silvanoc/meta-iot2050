@@ -39,18 +39,17 @@ jobs:
           echo "Trying to login to ghcr.io/silvanoc/meta-iot2050"
           sudo skopeo --insecure-policy login --username "${GITHUB_ACTOR}" --password ${{ secrets.PACKAGE_DEPLOY_TOKEN }} ghcr.io/silvanoc/meta-iot2050
 
-      # Runs a set of commands using the runners shell
-      - name: Build the containerized SDK
+      - name: Create containerized target root filesystem
         run: |
           docker pull ghcr.io/silvanoc/kas/kas-isar:next
           wget -O kas-container https://raw.githubusercontent.com/Silvanoc/kas/master/kas-container
           chmod +x kas-container
-          KAS_CONTAINER_IMAGE_PATH="ghcr.io/silvanoc/kas" KAS_IMAGE_VERSION="next" ./kas-container --isar build kas-iot2050-example.yml:kas/opt/sdk.yml
+          KAS_CONTAINER_IMAGE_PATH="ghcr.io/silvanoc/kas" KAS_IMAGE_VERSION="next" ./kas-container --isar build kas-iot2050-example.yml
 
-      - name: unxz containerized SDK
+      - name: unxz containerized root filesystem
         run: |
-          unxz build/tmp/deploy/images/iot2050/sdk-iot2050-debian-arm64-docker-archive.tar.xz
+          unxz build/tmp/deploy/images/iot2050/iot2050-debian-arm64-docker-archive.tar.xz
 
       - name: Push container image to ghcr
-        run: sudo skopeo --insecure-policy copy docker-archive:$(pwd)/build/tmp/deploy/images/iot2050/sdk-iot2050-debian-arm64-docker-archive.tar docker://ghcr.io/silvanoc/meta-iot2050/iot2050-debian-sdk-arm64:latest
+        run: sudo skopeo --insecure-policy copy docker-archive:$(pwd)/build/tmp/deploy/images/iot2050/iot2050-debian-arm64-docker-archive.tar docker://ghcr.io/silvanoc/meta-iot2050/iot2050-debian-arm64:latest
 
